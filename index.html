@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TO-DO-LIST</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sedan:ital@0;1&display=swap" rel="stylesheet">
+    
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:ital@0;1&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
+    <script src="https://kit.fontawesome.com/2b7242c201.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <section class="to-do-list" id="to-do-list">
+        <h1 class="display-1">TO DO LIST</h1>
+    
+        <div class="card">
+            <div class="card-body">
+                <div class="input-group mb-3">
+                    <input id="newItemInput" class="form-control" type="text" placeholder="What do you need to do today?" aria-label="Add your item here...">
+                    <button type="button" class="btn btn-primary" onclick="addItem()">Submit</button>
+                </div>
+            </div>
+        </div>
+    
+
+        <ul class="lists-sections">
+            <li class="nav-item">
+                <a id="allLink" class="nav-link active" aria-current="page" href="#" onclick="showAll()">ALL</a>
+              </li>
+              <li class="nav-item">
+                <a id="activeLink" class="nav-link" href="#" onclick="showActive()">Active</a>
+              </li>
+              <li class="nav-item">
+                  <a id="completedLink" class="nav-link" href="#" onclick="showCompleted()">Completed</a>
+              </li>
+        </ul>
+    
+        <table id="to-do-table" class="table table-borderless table-sm table-hover">
+            <tbody id="taskList">
+            </tbody>
+        </table>
+     </section>
+
+     <div id="confirmationOverlay" class="overlay">
+        <div class="background"></div>
+        <div class="alert_box">
+            <div class="icon">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <header>Warning</header>
+            <p>Are you sure want to permanently delete this task?</p>
+            <div class="btns">
+                <button id="deleteButton" onclick="deleteConfirmed()">Yes Delete</button>
+                <button onclick="closeConfirmation()">No Cancel</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    loadTasksFromLocalStorage();
+});
+
+
+function loadTasksFromLocalStorage() {
+  try {
+    const savedTasks = localStorage.getItem("tasks");
+    const taskList = document.querySelector("#taskList");
+
+    if (savedTasks) {
+      const tasks = JSON.parse(savedTasks);
+
+      taskList.innerHTML = "";
+
+      tasks.forEach(task => {
+        const newRow = document.createElement("tr");
+        newRow.classList.add("text-center");
+
+        const checkboxCell = document.createElement("td");
+        const checkboxInput = document.createElement("input");
+        checkboxInput.classList.add("form-check-input");
+        checkboxInput.setAttribute("type", "checkbox");
+        checkboxInput.checked = task.completed;
+        checkboxInput.addEventListener("change", function() {
+          moveItem(this);
+        });
+        checkboxCell.appendChild(checkboxInput);
+
+        const nameCell = document.createElement("td");
+        nameCell.classList.add("task-name");
+        nameCell.innerText = task.name;
+        if (task.completed) {
+          nameCell.style.textDecoration = "line-through";
+        }
+
+        const settingsCell = document.createElement("td");
+        const settingsIcon = document.createElement("i");
+        settingsIcon.classList.add("fa", "fa-solid", "fa-ellipsis");
+        settingsIcon.setAttribute("onclick", "showMenu(this)");
+        settingsCell.appendChild(settingsIcon);
+
+        const dropdownMenu = document.createElement("div");
+        dropdownMenu.classList.add("dropdown-menu");
+        dropdownMenu.innerHTML = `
+            <a class="dropdown-item" href="#" onclick="editTask(this)">Edit</a>
+            <a class="dropdown-item" href="#" onclick="confirmDelete(this)">Delete</a>
+        `;
+
+        settingsCell.appendChild(dropdownMenu);
+
+        newRow.appendChild(checkboxCell);
+        newRow.appendChild(nameCell);
+        newRow.appendChild(settingsCell);
+
+        taskList.appendChild(newRow);
+      });
+    }
+  } catch (error) {
+    console.error("An error occurred while loading tasks from localStorage:", error);
+  }
+}
+
+
+
+function saveTasksToLocalStorage() {
+  var taskListHTML = document.getElementById("taskList").innerHTML;
+  localStorage.setItem("tasks", taskListHTML);
+
+  var tasks = [];
+
+  var rows = document.querySelectorAll("#taskList tr");
+  rows.forEach(function(row) {
+    var task = {
+      name: row.querySelector(".task-name").innerText,
+      completed: row.querySelector(".form-check-input").checked
+    };
+    tasks.push(task);
+  });
+
+  localStorage.setItem("tasks", JSON.stringify(tasks));
+}
+
+
+
+
+function addItem() {
+    var newItemText = document.getElementById("newItemInput").value.trim();
+
+    if (newItemText !== "") {
+        var newRow = document.createElement("tr");
+        newRow.classList.add("text-center");
+
+        var checkboxCell = document.createElement("td");
+        var checkboxInput = document.createElement("input");
+        checkboxInput.classList.add("form-check-input");
+        checkboxInput.setAttribute("type", "checkbox");
+        checkboxInput.setAttribute("aria-label", "...");
+        checkboxInput.addEventListener("change", function() {
+            moveItem(this);
+        });
+        checkboxCell.appendChild(checkboxInput);
+
+        var nameCell = document.createElement("td");
+        nameCell.classList.add("task-name");
+        nameCell.innerText = newItemText;
+
+        var settingsCell = document.createElement("td");
+        var settingsIcon = document.createElement("i");
+        settingsIcon.classList.add("fa", "fa-solid", "fa-ellipsis");
+        settingsIcon.setAttribute("onclick", "showMenu(this)");
+        settingsCell.appendChild(settingsIcon);
+
+        var dropdownMenu = document.createElement("div");
+        dropdownMenu.classList.add("dropdown-menu");
+        dropdownMenu.innerHTML = `
+            <a class="dropdown-item" href="#" onclick="editTask(this)">Edit</a>
+            <a class="dropdown-item" href="#" onclick="confirmDelete(this)">Delete</a>
+        `;
+
+        settingsCell.appendChild(dropdownMenu);
+
+        newRow.appendChild(checkboxCell);
+        newRow.appendChild(nameCell);
+        newRow.appendChild(settingsCell);
+
+        document.getElementById("taskList").appendChild(newRow);
+        document.getElementById("newItemInput").value = "";
+
+        saveTasksToLocalStorage();
+    }
+}
+      
+function moveItem(checkbox) {
+    var row = checkbox.closest("tr");
+    var nameCell = row.querySelector(".task-name");
+    if (checkbox.checked) {
+        nameCell.style.textDecoration = "line-through";
+    } else {
+        nameCell.style.textDecoration = "none";
+    }
+    saveTasksToLocalStorage();
+}
+
+
+function showAll() {
+    var taskList = document.getElementById("taskList");
+    var rows = taskList.children;
+    for (var i = 0; i < rows.length; i++) {
+        rows[i].style.display = "";
+        var checkbox = rows[i].querySelector("input[type=checkbox]");
+        var nameCell = rows[i].querySelector(".task-name");
+        if (checkbox && checkbox.checked) {
+            nameCell.style.textDecoration = "line-through";
+        } else {
+            nameCell.style.textDecoration = "none";
+        }
+    }
+}
+      
+function showActive() {
+    var taskList = document.getElementById("taskList");
+    var rows = taskList.children;
+    for (var i = 0; i < rows.length; i++) {
+        var checkbox = rows[i].querySelector("input[type=checkbox]");
+        if (checkbox && checkbox.checked) {
+            rows[i].style.display = "none";
+        } else {
+            rows[i].style.display = "";
+        }
+    }
+}
+      
+function showCompleted() {
+    var taskList = document.getElementById("taskList");
+    var rows = taskList.children;
+    for (var i = 0; i < rows.length; i++) {
+        var checkbox = rows[i].querySelector("input[type=checkbox]");
+        if (checkbox && checkbox.checked) {
+            rows[i].style.display = "";
+        } else {
+            rows[i].style.display = "none";
+        }
+    }
+}
+
+function showMenu(icon) {
+        var dropdown = icon.nextElementSibling;
+        dropdown.classList.toggle("show");
+        document.addEventListener("click", function(event) {
+        if (!dropdown.contains(event.target) && !icon.contains(event.target)) {
+        dropdown.classList.remove("show");
+        }
+    });
+}
+
+function editTask(link) {
+        var row = link.closest("tr");
+        var taskNameCell = row.querySelector(".task-name");
+        var taskName = taskNameCell.textContent.trim();
+        taskNameCell.innerHTML = `<input type="text" class="form-control" value="${taskName}" onblur="saveEditedTask(this)" onkeydown="checkEnterKey(event, this)">`;
+        taskNameCell.querySelector("input").focus();
+}
+
+
+
+function saveEditedTask(input) {
+    var row = input.closest("tr");
+    var editedTaskName = input.value.trim();
+    row.querySelector(".task-name").innerHTML = editedTaskName;
+
+    var rowIndex = Array.from(row.parentNode.children).indexOf(row);
+    var tasks = JSON.parse(localStorage.getItem("tasks"));
+
+    tasks[rowIndex].name = editedTaskName;
+
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+}
+
+
+function checkEnterKey(event, input) {
+        if (event.key === "Enter") {
+            saveEditedTask(input);
+        }
+}
+
+function confirmDelete(link) {
+        var row = link.closest("tr");
+        row.classList.add("pending-delete");
+        var confirmationOverlay = document.getElementById("confirmationOverlay");
+        confirmationOverlay.classList.add("active");
+}
+
+function deleteConfirmed() {
+    var confirmationOverlay = document.getElementById("confirmationOverlay");
+    var row = document.querySelector("tr.pending-delete");
+    row.remove();
+    confirmationOverlay.classList.remove("active");
+
+    saveTasksToLocalStorage();
+}
+
+function closeConfirmation() {
+    var confirmationOverlay = document.getElementById("confirmationOverlay");
+    confirmationOverlay.classList.remove("active");
+}
+
+</script>
+</body>
+</html>
